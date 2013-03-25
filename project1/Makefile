@@ -4,7 +4,7 @@ OBJCOPY=avr-objcopy
 
 MCU=atmega8
 F_CPU=1000000UL
-CFLAGS=-g -mmcu=$(MCU) -Wall -DF_CPU=$(F_CPU) -Wstrict-prototypes -Os -mcall-prologues
+CFLAGS=-g -mmcu=$(MCU) -I../include -Wall -DF_CPU=$(F_CPU) -Wstrict-prototypes -Os -mcall-prologues
 OBJS=test.o display.o
 NAME=Project1
 
