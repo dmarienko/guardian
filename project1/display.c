@@ -5,6 +5,7 @@
 #define DATA_BUS (B3|B2|B1|B0)
 #define LATCH_BIT B4
 #define DATA_PORT PORTC
+#define DDR_x     DDRC
 
 static void write_data_to_bus(unsigned char c) {
   unsigned char ch = (c & 0xf0) >> 4;
@@ -43,12 +44,19 @@ static void write_data_to_bus(unsigned char c) {
   bit_set(DATA_PORT, LATCH_BIT);
 }
 
+/**
+ * Display initialization
+ */
+void display_init(void) {
+  DDR_x = (DATA_BUS | LATCH_BIT);
+}
 
 void display(unsigned short v) {
   unsigned short l = v % 10;
   write_data_to_bus((((v-l)/10)<<4) | l);
 }
 
-void display_off() {
+
+void display_off(void) {
   write_data_to_bus(0xff);
 }

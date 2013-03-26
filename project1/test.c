@@ -1,39 +1,50 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "utils.h"
+#include "usart.h"
 
-extern void display(unsigned short v);
-extern void display_off();
+extern void display_init(void);
+extern void display(unsigned short);
+extern void display_off(void);
 
-void greet() {
+void greet(void) {
   int i;
 
-  bit_set(PORTD, B0);	
-  _delay_ms(500);
-  bit_clear(PORTD, B0);	
-
-  for (i=0; i<5; i++) {
+  for (i=0; i<3; i++) {
 	display_off();
 	_delay_ms(500);
 	display(88);
 	_delay_ms(500);
   }
+
+  /* for(i=0; i<100; i++) { */
+  /* 	display(i); */
+  /* 	_delay_ms(50); */
+  /* } */
+  //  _delay_ms(1000);
 }
 
 int main(void) {
-  DDRD = 0xff;		// port D as outputs
-  DDRC = 0xff;		// port C as outputs
-  
   int i, j;
+  usart_init(SPEED_9600);
 
-  for (i=0; i<200; i++) {
-	greet();
+#if 1
+  display_init();
+  greet();
+  display_off();
 
-	for(j=0; j<100; j++) {
-	  display(j);
-	  _delay_ms(500);
+  while(1) {
+  	int r = (int) usart_receive();
+  	display(r);
+  }
+#else
+  while(1) {
+	for(i=0;i<100;i++) {
+	  usart_transmit((unsigned char) i);
+	  _delay_ms(1000);
 	}
   }
-  
+#endif
+    
   return 1;
 }
