@@ -7,9 +7,9 @@
 #define DATA_PORT PORTC
 #define DDR_x     DDRC
 
-static void write_data_to_bus(unsigned char c) {
-  unsigned char ch = (c & 0xf0) >> 4;
-  unsigned char cl = (c & 0x0f);
+static void write_data_to_bus(uint8_t c) {
+  uint8_t ch = (c & 0xf0) >> 4;
+  uint8_t cl = (c & 0x0f);
   /* --- first version ---
 	PORTB &= 0xE1;
 	PORTB |= _BV(PB5);
@@ -51,11 +51,14 @@ void display_init(void) {
   DDR_x = (DATA_BUS | LATCH_BIT);
 }
 
-void display(unsigned short v) {
-  unsigned short l = v % 10;
+void display(uint16_t v) {
+  uint16_t l = v % 10;
   write_data_to_bus((((v-l)/10)<<4) | l);
 }
 
+void display_err(uint8_t error) {
+  write_data_to_bus(0xa0 | error);
+}
 
 void display_off(void) {
   write_data_to_bus(0xff);
