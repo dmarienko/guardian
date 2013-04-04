@@ -24,16 +24,12 @@ void transmit_packet(uint8_t address, uint8_t* buffer, uint16_t len) {
 
   // try to wakeup receiver
   usart_transmit(0xff);
-  _delay_ms(10);
   usart_transmit(0xff);
-  _delay_ms(10);
   usart_transmit(0xff);
-  _delay_ms(10);
 
   // transmit header and address
   usart_transmit(HEADER);   // header
   usart_transmit(address);  // addr
-  _delay_ms(50);
 
   tbuff[0] = (uint8_t) (len >> 8);      // len h
   tbuff[1] = (uint8_t) (len & 0x00ff);  // len l
