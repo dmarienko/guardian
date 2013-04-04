@@ -10,11 +10,13 @@ extern void display_off(void);
 extern void display_err(uint8_t error);
 
 #define HEADER 0x55
-uint8_t tbuff[128];
+#define MAX_PACKET_LEN 128
 
-//#define TRANSMITTER
+#define TRANSMITTER
 
 #ifdef TRANSMITTER
+
+static uint8_t tbuff[MAX_PACKET_LEN];
 
 void transmit_packet(uint8_t address, uint8_t* buffer, uint16_t len) {
   int i;
@@ -80,7 +82,7 @@ void greet(void) {
 int receive_packet(uint8_t address, uint8_t* buff) {
   int i;
   uint16_t crc, len;
-  uint8_t b0, b1, crc_h, crc_l, len_h, len_l;
+  uint8_t b0, crc_h, crc_l, len_h, len_l;
   int r = -1;
 
   b0 = usart_receive();
@@ -91,7 +93,10 @@ int receive_packet(uint8_t address, uint8_t* buff) {
 	  len_h = usart_receive();
 	  len_l = usart_receive();
 	  len = (len_h << 8) | len_l;
-	  
+
+	  // wrong length
+	  if (len > MAX_PACKET_LEN) return -4;
+
 	  // start receiving buffer
 	  for(i=0; i < len; i++) {
 		b0 = usart_receive();
@@ -119,48 +124,16 @@ int receive_packet(uint8_t address, uint8_t* buff) {
 }
 
 void _receiver_main(uint8_t address) {
+  uint8_t buffer[1] = { 0 };
   int i;
   display_init();
   greet();
   display_off();
 
   while(1) {
-	uint16_t crc, len;
-	uint8_t b0, b1, crc_h, crc_l, len_h, len_l;
-
-	b0 = usart_receive();
-  	if (b0==HEADER) { // header
-	  b0 = usart_receive();
-	  if (b0==address) {   // addr
-		// get packet length
-		len_h = usart_receive();
-		len_l = usart_receive();
-		len = (len_h << 8) | len_l;
-		
-		// start receiving buffer
-		for(i=0; i < len; i++) {
-		  b0 = usart_receive();
-		  tbuff[i] = b0;
-		}
-
-		// receiving CRC16
-		crc_h = usart_receive();
-		crc_l = usart_receive();
-		
-		// calculate crc
-		crc = 0xffff;
-		crc = _crc16_update(crc, len_h);
-		crc = _crc16_update(crc, len_l);
-		for(i=0; i < len; i++)
-		  crc = _crc16_update(crc, tbuff[i]);
-		
-		// check crc
-		if (((crc_h << 8) | crc_l)==crc) { 
-		  display(tbuff[0]); 
-		} else display_err(3);
-
-	  }
-	}
+	uint16_t r = receive_packet(address, &buffer);
+	if(r==-3) display_err(3);
+	if(r>0) display(buffer[0]);
   }
 }
 #endif
