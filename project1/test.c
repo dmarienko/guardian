@@ -9,42 +9,57 @@ extern void display(uint16_t);
 extern void display_off(void);
 extern void display_err(uint8_t error);
 
+#define HEADER 0x55
 uint8_t tbuff[128];
 
 //#define TRANSMITTER
 
 #ifdef TRANSMITTER
 
-void transmit_packet(uint8_t* buffer, uint16_t len) {
+void transmit_packet(uint8_t address, uint8_t* buffer, uint16_t len) {
   int i;
   uint16_t crc = 0xffff;
 
-  tbuff[0] = 0x55;  // header
-  tbuff[1] = 0x01;  // addr
-  tbuff[2] = (uint8_t) (len >> 8);      // len h
-  tbuff[3] = (uint8_t) (len & 0x00ff);  // len l
-  for(i=0;i<len;i++) {
-	tbuff[i+4] = buffer[i];
-  }
-  
-  // start transmission
-  for(i=0; i<(len+4); i++) {
-	usart_transmit(tbuff[i]);
-	crc = _crc16_update(crc, tbuff[i]);
-	_delay_ms(10);
-  }
-  usart_transmit((uint8_t) (crc >> 8));
+  // try to wakeup receiver
+  usart_transmit(0xff);
   _delay_ms(10);
+  usart_transmit(0xff);
+  _delay_ms(10);
+  usart_transmit(0xff);
+  _delay_ms(10);
+
+  // transmit header and address
+  usart_transmit(HEADER);   // header
+  usart_transmit(address);  // addr
+  _delay_ms(50);
+
+  tbuff[0] = (uint8_t) (len >> 8);      // len h
+  tbuff[1] = (uint8_t) (len & 0x00ff);  // len l
+  for(i=0;i<len;i++) {
+	tbuff[i+2] = buffer[i];
+  }
+
+  // calc crc
+  for(i=0; i<(len+2); i++) 
+	crc = _crc16_update(crc, tbuff[i]);
+  
+  // transmit buffer
+  for(i=0; i<(len+2); i++) {
+	usart_transmit(tbuff[i]);
+  }
+
+  // finally transmit crc
+  usart_transmit((uint8_t) (crc >> 8));
   usart_transmit((uint8_t) (crc & 0x00ff));
 }
 
-void _transmitter_main(void) {
+void _transmitter_main(uint8_t address) {
   int i;
   uint8_t buffer[1] = { 0x00 };
   while(1) {
 	for(i=0; i<100; i++) {
 	  buffer[0] = (uint8_t) i;
-	  transmit_packet(&buffer, 1);
+	  transmit_packet(address, &buffer, 1);
 	  _delay_ms(1000);
 	}
   }
@@ -60,52 +75,92 @@ void greet(void) {
 	display(88);
 	_delay_ms(500);
   }
-
-  /* for(i=0; i<100; i++) { */
-  /* 	display(i); */
-  /* 	_delay_ms(50); */
-  /* } */
-  //  _delay_ms(1000);
 }
 
-void _receiver_main(void) {
+int receive_packet(uint8_t address, uint8_t* buff) {
+  int i;
+  uint16_t crc, len;
+  uint8_t b0, b1, crc_h, crc_l, len_h, len_l;
+  int r = -1;
+
+  b0 = usart_receive();
+  if (b0==HEADER) { // header
+	b0 = usart_receive();
+	if (b0==address) {   // addr
+	  // get packet length
+	  len_h = usart_receive();
+	  len_l = usart_receive();
+	  len = (len_h << 8) | len_l;
+	  
+	  // start receiving buffer
+	  for(i=0; i < len; i++) {
+		b0 = usart_receive();
+		buff[i] = b0;
+	  }
+	  
+	  // receiving CRC16
+	  crc_h = usart_receive();
+	  crc_l = usart_receive();
+	  
+	  // calculate crc
+	  crc = 0xffff;
+	  crc = _crc16_update(crc, len_h);
+	  crc = _crc16_update(crc, len_l);
+	  for(i=0; i < len; i++)
+		crc = _crc16_update(crc, buff[i]);
+	  
+	  // check crc
+	  if (((crc_h << 8) | crc_l)==crc)
+		r = len;
+	  else r = -3;
+	}
+  }
+  return r;
+}
+
+void _receiver_main(uint8_t address) {
   int i;
   display_init();
   greet();
   display_off();
 
   while(1) {
-	uint16_t crc = 0xffff;
-	uint16_t crc_r, len = 0;
-	uint8_t b0, b1;
+	uint16_t crc, len;
+	uint8_t b0, b1, crc_h, crc_l, len_h, len_l;
 
 	b0 = usart_receive();
-  	if(b0==0x55) { // header
-	  crc = _crc16_update(crc, b0);
-
+  	if (b0==HEADER) { // header
 	  b0 = usart_receive();
-	  if (b0==0x01) {   // addr
-		crc = _crc16_update(crc, b0);
-
-		// high len
-		b0 = usart_receive();
-		crc = _crc16_update(crc, b0);
-		b1 = usart_receive();
-		crc = _crc16_update(crc, b1);
-		len = (b0 << 8) | b1;
-
+	  if (b0==address) {   // addr
+		// get packet length
+		len_h = usart_receive();
+		len_l = usart_receive();
+		len = (len_h << 8) | len_l;
+		
+		// start receiving buffer
 		for(i=0; i < len; i++) {
 		  b0 = usart_receive();
 		  tbuff[i] = b0;
-		  crc = _crc16_update(crc, b0);
 		}
-		b0 = usart_receive();
-		_delay_ms(10);
-		b1 = usart_receive();
-		crc_r = (b0 << 8) | b1;
-		if (crc_r==crc) { display(tbuff[0]); } else display_err(3);
-	  }  else display_err(2);
-	} else display_err(1);
+
+		// receiving CRC16
+		crc_h = usart_receive();
+		crc_l = usart_receive();
+		
+		// calculate crc
+		crc = 0xffff;
+		crc = _crc16_update(crc, len_h);
+		crc = _crc16_update(crc, len_l);
+		for(i=0; i < len; i++)
+		  crc = _crc16_update(crc, tbuff[i]);
+		
+		// check crc
+		if (((crc_h << 8) | crc_l)==crc) { 
+		  display(tbuff[0]); 
+		} else display_err(3);
+
+	  }
+	}
   }
 }
 #endif
@@ -114,9 +169,9 @@ int main(void) {
   usart_init(SPEED_4800);
 
 #ifdef TRANSMITTER
-  _transmitter_main();
+  _transmitter_main(1);
 #else
-  _receiver_main();
+  _receiver_main(1);
 #endif
     
   return 1;
