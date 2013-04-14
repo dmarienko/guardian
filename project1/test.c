@@ -19,7 +19,7 @@ void _transmitter_main(uint8_t address) {
     while(1) {
         for(i=0; i<100; i++) {
             buffer[0] = (uint8_t) i;
-            hm433_transmit_packet(address, &buffer, 1);
+            hm433_transmit_packet(address, (uint8_t*) &buffer, 1);
             _delay_ms(1000);
         }
     }
@@ -45,7 +45,7 @@ void _receiver_main(uint8_t address) {
     display_off();
 
     while(1) {
-        uint16_t r = hm433_receive_packet(address, &buffer);
+        uint16_t r = hm433_receive_packet(address, (uint8_t*) &buffer);
         if(r==-3) display_err(3);
         if(r>0) display(buffer[0]);
     }
