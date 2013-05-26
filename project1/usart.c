@@ -2,11 +2,11 @@
 
 void usart_init(uint16_t ubrr) {
     /* Set baud rate */
-    UBRRH = (uint8_t) (ubrr>>8); // set speed
+    UBRRH = (uint8_t) (ubrr >> 8); // set speed
     UBRRL = (uint8_t) ubrr;
-    UCSRB = BIT(RXEN) | BIT(TXEN);     // tx/dx is enabled
+    UCSRB = BIT(RXEN) | BIT(TXEN); // tx/dx is enabled
     UCSRC = 0x86;
-    UCSRC = BIT(URSEL) | BIT(USBS) | (3<<UCSZ0);
+    UCSRC = BIT(URSEL) | BIT(USBS) | (3 << UCSZ0);
 }
 
 uint8_t usart_receive(void) {

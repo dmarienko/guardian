@@ -20,21 +20,21 @@ void hm433_transmit_packet(uint8_t address, uint8_t* buffer, uint16_t len) {
     usart_transmit(0xff);
 
     // transmit header and address
-    usart_transmit(HEADER);   // header
-    usart_transmit(address);  // addr
+    usart_transmit(HEADER); // header
+    usart_transmit(address); // addr
 
-    tbuff[0] = (uint8_t) (len >> 8);      // len h
-    tbuff[1] = (uint8_t) (len & 0x00ff);  // len l
-    for(i=0;i<len;i++) {
-        tbuff[i+2] = buffer[i];
+    tbuff[0] = (uint8_t) (len >> 8); // len h
+    tbuff[1] = (uint8_t) (len & 0x00ff); // len l
+    for (i = 0; i < len; i++) {
+        tbuff[i + 2] = buffer[i];
     }
 
     // calc crc
-    for(i=0; i<(len+2); i++)
+    for (i = 0; i < (len + 2); i++)
         crc = _crc16_update(crc, tbuff[i]);
 
     // transmit buffer
-    for(i=0; i<(len+2); i++) {
+    for (i = 0; i < (len + 2); i++) {
         usart_transmit(tbuff[i]);
     }
 
@@ -42,7 +42,6 @@ void hm433_transmit_packet(uint8_t address, uint8_t* buffer, uint16_t len) {
     usart_transmit((uint8_t) (crc >> 8));
     usart_transmit((uint8_t) (crc & 0x00ff));
 }
-
 
 /**
  * Try to receive datagram from HM-R433 module
@@ -54,9 +53,9 @@ int hm433_receive_packet(uint8_t address, uint8_t* buff) {
     int r = -1;
 
     b0 = usart_receive();
-    if (b0==HEADER) { // header
+    if (b0 == HEADER) { // header
         b0 = usart_receive();
-        if (b0==address) {   // addr
+        if (b0 == address) { // addr
             // get packet length
             len_h = usart_receive();
             len_l = usart_receive();
@@ -66,7 +65,7 @@ int hm433_receive_packet(uint8_t address, uint8_t* buff) {
             if (len > MAX_PACKET_LEN) return -4;
 
             // start receiving buffer
-            for(i=0; i < len; i++) {
+            for (i = 0; i < len; i++) {
                 b0 = usart_receive();
                 buff[i] = b0;
             }
@@ -79,11 +78,11 @@ int hm433_receive_packet(uint8_t address, uint8_t* buff) {
             crc = 0xffff;
             crc = _crc16_update(crc, len_h);
             crc = _crc16_update(crc, len_l);
-            for(i=0; i < len; i++)
+            for (i = 0; i < len; i++)
                 crc = _crc16_update(crc, buff[i]);
 
             // check crc
-            if (((crc_h << 8) | crc_l)==crc)
+            if (((crc_h << 8) | crc_l) == crc)
                 r = len;
             else r = -3;
         }

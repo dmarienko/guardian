@@ -18,7 +18,7 @@ static void write_data_to_bus(uint8_t c) {
        PORTB &= 0xE1;
        PORTB |= ch;
        PORTB |= _BV(PB5);
-    */
+     */
 
     // clear data bus from previous value
     bit_clear(DATA_PORT, DATA_BUS);
@@ -53,7 +53,7 @@ void display_init(void) {
 
 void display(uint16_t v) {
     uint16_t l = v % 10;
-    write_data_to_bus((((v-l)/10)<<4) | l);
+    write_data_to_bus((((v - l) / 10) << 4) | l);
 }
 
 void display_err(uint8_t error) {
