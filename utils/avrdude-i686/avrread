@@ -1,0 +1,12 @@
+#!/bin/sh
+AVRP=./
+s1=`lsmod | grep -e "^ftdi"`
+echo $s1
+if [ "x$s1" = "x" ]; then
+	echo "Kernel module isn't presented"
+else
+	echo "Kernel module removal ..."
+	sudo rmmod ftdi_sio
+fi
+#sudo $AVRP/avrdude -C $AVRP/avrdude.conf -p m8 -c usbbit -B 115200 -P /dev/ttyUSB0 -U flash:r:$1
+sudo $AVRP/avrdude -C $AVRP/avrdude.conf -p m8 -c usbbit -B $1 -P $2 -U flash:r:$3
